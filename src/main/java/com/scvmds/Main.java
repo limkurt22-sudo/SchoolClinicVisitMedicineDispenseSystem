@@ -1,6 +1,8 @@
 package com.scvmds;
 
 import com.scvmds.dao.UserDao;
+import com.scvmds.model.User;
+import com.scvmds.ui.AdminMenu;
 
 import java.util.Scanner;
 
@@ -17,6 +19,7 @@ public class Main {
         System.out.println("3. Exit");
         System.out.print("Select option: ");
         int select = sc.nextInt();
+        sc.nextLine();
         System.out.println("===================================================");
 
         switch (select){
@@ -41,7 +44,7 @@ public class Main {
                         role = "STUDENT";
                         break;
                     case "4":
-                        role = "PARENT1";
+                        role = "PARENT";
                         break;
                     default:
                         role = null;
@@ -54,10 +57,29 @@ public class Main {
                 }
                 break;
             case 2:
+                handleLogin();
                 break;
             case 3:
                 System.out.println("THANK YOU FOR VISITING THE SYSTEM. GOOD BYE!");
                 break;
+        }
+    }
+    private static void handleLogin(){
+        System.out.print("Enter Username: ");
+        String username = sc.nextLine();
+        System.out.print("Enter Password: ");
+        String password = sc.nextLine();
+        UserDao userDao = new UserDao();
+
+        User user = userDao.login(username, password);
+
+        if (user != null){
+            System.out.println(" > Welcome " + user.username() + " | ROLE: " + user.roles());
+
+            switch (user.roles()){
+                case "ADMIN" -> new AdminMenu(userDao, sc).display(user);
+                default -> System.out.println("Account roles not found!");
+            }
         }
     }
 }

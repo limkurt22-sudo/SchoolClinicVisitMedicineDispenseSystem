@@ -21,8 +21,6 @@ public class Main {
 
         switch (select){
             case 1:
-                break;
-            case 2:
                 System.out.print("Enter new Username: ");
                 String newUser = sc.nextLine().trim();
                 System.out.print("Enter Password: ");
@@ -43,17 +41,19 @@ public class Main {
                         role = "STUDENT";
                         break;
                     case "4":
-                        role = "PARENT";
+                        role = "PARENT1";
                         break;
                     default:
                         role = null;
                         break;
                 }
                 if (role != null) {
-                   userDao.registerUser(newUser, newPass, role);
+                    userDao.registerUser(newUser, newPass, role);
                 } else {
                     System.out.println("Invalid Role Selection!");
                 }
+                break;
+            case 2:
                 break;
             case 3:
                 System.out.println("THANK YOU FOR VISITING THE SYSTEM. GOOD BYE!");

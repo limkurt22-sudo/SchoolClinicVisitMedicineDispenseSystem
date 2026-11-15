@@ -105,6 +105,29 @@ public class UserDao {
         return usersList;
     }
 
+    public List<User> getStudentandParentUser() {
+        List<User> usersList = new ArrayList<>();
+        String sql = "SELECT id, username, password, roles, status FROM users WHERE roles = 'STUDENT' OR roles = 'PARENT' ";
+
+        try(Connection conn = DatabaseConnection.getConnection();
+            Statement stmt = conn.createStatement();
+            ResultSet rs = stmt.executeQuery(sql)){
+            while (rs.next()){
+                usersList.add(new User(
+                        rs.getInt("id"),
+                        rs.getString("username"),
+                        rs.getString("password"),
+                        rs.getString("roles"),
+                        rs.getString("status")
+                ));
+            }
+        } catch (SQLException e){
+            System.err.println("[Error] Fetching Parent and Student users: " + e.getMessage());
+        }
+
+        return usersList;
+    }
+
     public List<User> getPendingUser(){
         List<User> pendingList = new ArrayList<>();
         String sql = "SELECT * FROM users WHERE status = 'PENDING'";
@@ -171,6 +194,17 @@ public class UserDao {
             System.err.println("Error Updating user: " +e.getMessage());
         }
         return  false;
+    }
+
+    public void deleteUser(int userId) {
+        String sql = "DELETE FROM users WHERE id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            pstmt.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("[ERROR] Failed to delete user: " + e.getMessage());
+        }
     }
 
 }

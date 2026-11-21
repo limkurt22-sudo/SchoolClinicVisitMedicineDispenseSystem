@@ -27,7 +27,7 @@ public class ActivityLogDao {
 
     public List<ActivityLog> getAllLogs(){
         List<ActivityLog> logs = new ArrayList<>();
-        String sql = "SELECT id, user_id, username, action, timestamp FROM activity_logs ORDER BY timestamp ASC";
+        String sql = "SELECT id, user_id, username, action, timestamp FROM activity_logs ORDER BY timestamp DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();

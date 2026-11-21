@@ -3,8 +3,10 @@ package com.scvmds.dao;
 import com.scvmds.model.Medicine;
 
 import java.sql.*;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.format.DateTimeParseException;
 
 public class MedicineDao {
 
@@ -115,4 +117,31 @@ public class MedicineDao {
             return false;
         }
     }
+
+    public int deactivateExpiredMedicines() {
+        int deactivatedCount = 0;
+        LocalDate today = LocalDate.now();
+
+        for (Medicine med : getAllMedicines(true)) {
+            if ("INACTIVE".equalsIgnoreCase(med.status())) {
+                continue;
+            }
+            String expStr = med.expirationDate();
+            if (expStr == null || expStr.isBlank()) {
+                continue;
+            }
+            try {
+                LocalDate expiryDate = LocalDate.parse(expStr.trim()); // expects YYYY-MM-DD
+                if (!expiryDate.isAfter(today)) { // expired today or earlier
+                    if (setMedicineStatus(med.id(), "INACTIVE")) {
+                        deactivatedCount++;
+                    }
+                }
+            } catch (DateTimeParseException e) {
+                System.err.println("[WARN] Invalid expiration date format for Medicine ID " + med.id() + ": " + expStr);
+            }
+        }
+        return deactivatedCount;
+    }
+
 }

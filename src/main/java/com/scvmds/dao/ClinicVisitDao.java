@@ -140,18 +140,28 @@ public class ClinicVisitDao {
         }
     }
 
-    public boolean linkParentToStudent(int parentUserId, int studentUserId) {
-        String sql = "INSERT OR IGNORE INTO parent_student_links(parent_user_id, student_user_id) VALUES (?, ?)";
+    public boolean linkParentToStudent(int parentUserId, int studentUserId, String linkStatus) {
+        String sql = """
+        INSERT INTO parent_student_links (parent_user_id, student_user_id)
+        SELECT ?, ?
+        WHERE EXISTS (SELECT 1 FROM users WHERE id = ? AND UPPER(roles) = 'PARENT')
+          AND EXISTS (SELECT 1 FROM users WHERE id = ? AND UPPER(roles) = 'STUDENT')
+    """;
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, parentUserId);
             pstmt.setInt(2, studentUserId);
+            pstmt.setInt(3, parentUserId);
+            pstmt.setInt(4, studentUserId);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("[ERROR] Failed to link parent to student: " + e.getMessage());
             return false;
         }
     }
+
+
 
     public List<Integer> getLinkedStudentIds(int parentUserId) {
         List<Integer> ids = new ArrayList<>();

@@ -117,6 +117,23 @@ public class AdminMenu {
         }
         System.out.println(border);
     }
+
+    private void displayMedicineTable(List<Medicine> meds) {
+        System.out.println("\n+-----+----------------------+---------------+-------+------------+------------+");
+        System.out.printf("| %-3s | %-20s | %-13s | %-5s | %-10s | %-10s |\n",
+                "ID", "Medicine Name", "Form", "Stock", "Expiry", "Status");
+        System.out.println("+-----+----------------------+---------------+-------+------------+------------+");
+        if (meds.isEmpty()) {
+            System.out.println("| No medicines available.                                                      |");
+        } else {
+            for (Medicine m : meds) {
+                System.out.printf("| %-3d | %-20s | %-13s | %-5d | %-10s | %-10s |\n",
+                        m.id(), m.name(), m.dosageForm(), m.stockQuantity(), m.expirationDate(), m.status());
+            }
+        }
+        System.out.println("+-----+----------------------+---------------+-------+------------+------------+");
+    }
+
     private void displayUserTable(List<User> users, String title) {
         System.out.println("\n================== " + title + " ==================");
         if (users.isEmpty()) {
@@ -256,12 +273,55 @@ public class AdminMenu {
             return;
         }
 
+
+
+
         userDao.deleteUser(userId);
         logDao.logActivity(currentAdmin.id(), currentAdmin.username(), "Admin deleted User ID " + userId);
         System.out.println("-> [SUCCESS] User ID " + userId + " deleted successfully.");
     }
 
+    private void displayVisitsTable(List<ClinicVisit> visits, String title) {
+        System.out.println("\n=========================================================================================================================");
+        System.out.println("                                            " + title);
+        System.out.println("=========================================================================================================================");
+        if (visits == null || visits.isEmpty()) {
+            System.out.println("-> No clinic visit records found.");
+            return;
+        }
+
+        String border = "+-----+---------------+--------------------+--------------------+--------------------+-----+---------------------+----------+";
+        System.out.println(border);
+        System.out.printf("| %-3s | %-13s | %-18s | %-18s | %-18s | %-3s | %-19s | %-8s |\n",
+                "ID", "Student", "Complaint", "Treatment", "Medicine", "Qty", "Date", "Status");
+        System.out.println(border);
+
+        for (ClinicVisit v : visits) {
+            System.out.printf("| %-3d | %-13s | %-18s | %-18s | %-18s | %-3d | %-19s | %-8s |\n",
+                    v.id(),
+                    truncate(v.studentName(), 13),
+                    truncate(v.complaint(), 18),
+                    truncate(v.treatmentGiven(), 18),
+                    truncate(v.medicineName(), 18),
+                    v.quantityDispensed(),
+                    truncate(v.visitDate(), 19),
+                    truncate(v.status(), 8));
+        }
+        System.out.println(border);
+    }
+
+    private String truncate(String text, int max) {
+        if (text == null) return "";
+        return text.length() <= max ? text : text.substring(0, Math.max(0, max - 3)) + "...";
+    }
+
     private void manageMedicines(User admin) {
+
+        int expiredCount = medicineDao.deactivateExpiredMedicines();
+        if (expiredCount > 0) {
+            logDao.logActivity(admin.id(), admin.username(), "Auto-deactivated " + expiredCount + " expired medicine(s)");
+            System.out.println("-> [INFO] " + expiredCount + " expired medicine(s) automatically set to INACTIVE.");
+        }
         boolean managing = true;
         while (managing) {
             System.out.println("\n=== MANAGE MEDICINES ===");
@@ -366,12 +426,35 @@ public class AdminMenu {
         int opt = readIntInput("Select: ");
 
         if (opt == 1) {
-            int id = readIntInput("Enter Visit ID to delete: ");
+            List<ClinicVisit> viewAllClinicVisit = visitDao.getAllVisits(true);
+            displayVisitsTable(viewAllClinicVisit, "ALL CLINIC VISITS");
+
+            if (viewAllClinicVisit.isEmpty()) {
+                System.out.println("-> No visit records available to delete.");
+                return;
+            }
+
+            int id = readIntInput("Enter Visit ID to delete (or 0 to cancel): ");
+            if (id == 0) {
+                System.out.println("-> Operation cancelled.");
+                return;
+            }
+
+            boolean exists = viewAllClinicVisit.stream().anyMatch(v -> v.id() == id);
+            if (!exists) {
+                System.out.println("-> [ERROR] Visit ID " + id + " not found.");
+                return;
+            }
+
             if (visitDao.deleteVisitRecord(id)) {
                 logDao.logActivity(admin.id(), admin.username(), "Deleted visit ID " + id);
                 System.out.println("-> [SUCCESS] Visit deleted.");
+            } else {
+                System.out.println("-> [ERROR] Failed to delete visit ID " + id + ".");
             }
         } else if (opt == 2) {
+            List<Medicine> viewAllMedicine = medicineDao.getAllMedicines(true);
+            displayMedicineTable(viewAllMedicine);
             int id = readIntInput("Enter Medicine ID to delete: ");
             if (medicineDao.deleteMedicine(id)) {
                 logDao.logActivity(admin.id(), admin.username(), "Deleted medicine ID " + id);
@@ -388,15 +471,59 @@ public class AdminMenu {
     }
 
     private void linkParentToStudent(User admin) {
-        displayUserTable(userDao.getStudentandParentUser(), "PARENT AND STUDENTS USER");
-        int parentId = readIntInput("Enter Parent User ID: ");
-        int studentId = readIntInput("Enter Student User ID: ");
+        List<User> allUsers = userDao.getAllUsers();
 
-        if (visitDao.linkParentToStudent(parentId, studentId)) {
+        java.util.Set<Integer> linkedParentIds = new java.util.HashSet<>();
+        java.util.Set<Integer> linkedStudentIds = new java.util.HashSet<>();
+
+        String checkSql = "SELECT parent_user_id, student_user_id FROM parent_student_links";
+        try (java.sql.Connection conn = com.scvmds.dao.DatabaseConnection.getConnection();
+             java.sql.Statement stmt = conn.createStatement();
+             java.sql.ResultSet rs = stmt.executeQuery(checkSql)) {
+            while (rs.next()) {
+                linkedParentIds.add(rs.getInt("parent_user_id"));
+                linkedStudentIds.add(rs.getInt("student_user_id"));
+            }
+        } catch (java.sql.SQLException e) {
+            System.err.println("[ERROR] Failed to load existing links: " + e.getMessage());
+            return;
+        }
+
+        List<User> unlinkedParents = allUsers.stream()
+                .filter(u -> "PARENT".equalsIgnoreCase(u.roles()) && !linkedParentIds.contains(u.id()))
+                .toList();
+
+        List<User> unlinkedStudents = allUsers.stream()
+                .filter(u -> "STUDENT".equalsIgnoreCase(u.roles()) && !linkedStudentIds.contains(u.id()))
+                .toList();
+
+        displayUserTable(unlinkedParents, "UNLINKED PARENTS");
+        displayUserTable(unlinkedStudents, "UNLINKED STUDENTS");
+
+        if (unlinkedParents.isEmpty() || unlinkedStudents.isEmpty()) {
+            System.out.println("-> [INFO] Need at least one unlinked Parent and one unlinked Student to create a link.");
+            return;
+        }
+
+        int parentId = readIntInput("Enter Parent User ID (or 0 to cancel): ");
+        if (parentId == 0) return;
+
+        int studentId = readIntInput("Enter Student User ID (or 0 to cancel): ");
+        if (studentId == 0) return;
+
+        boolean validParent = unlinkedParents.stream().anyMatch(u -> u.id() == parentId);
+        boolean validStudent = unlinkedStudents.stream().anyMatch(u -> u.id() == studentId);
+
+        if (!validParent || !validStudent) {
+            System.out.println("-> [ERROR] Please select valid IDs from the Unlinked Parents and Unlinked Students tables.");
+            return;
+        }
+
+        if (visitDao.linkParentToStudent(parentId, studentId, "LINKED")) {
             logDao.logActivity(admin.id(), admin.username(), "Linked Parent ID " + parentId + " to Student ID " + studentId);
             System.out.println("-> [SUCCESS] Parent linked to Student.");
         } else {
-            System.out.println("-> [ERROR] Failed to link accounts.");
+            System.out.println("-> [ERROR] Failed to link accounts (link may already exist).");
         }
     }
 }

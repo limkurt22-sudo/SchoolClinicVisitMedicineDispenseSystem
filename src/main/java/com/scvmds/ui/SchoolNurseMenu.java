@@ -34,7 +34,7 @@ public class SchoolNurseMenu {
             System.out.println("\n======================================");
             System.out.println(" ->> SCHOOL NURSE / CLINIC STAFF <<- ");
             System.out.println("======================================");
-            System.out.println("1. Record Clinic Visit & Dispense Medicine");
+            System.out.println("1. Record Clinic Visit & Dispense Medicine"); //Main Function
             System.out.println("2. Search Student Clinic History");
             System.out.println("3. View All Clinic Visits");
             System.out.println("4. View Available Medicine Inventory");
@@ -78,7 +78,7 @@ public class SchoolNurseMenu {
             return;
         }
 
-        System.out.print("Enter Chief Complaint / Symptoms: ");
+        System.out.print("Enter Complaint / Symptoms: ");
         String complaint = scanner.nextLine().trim();
         if (complaint.isEmpty()) {
             System.out.println("-> [ERROR] Complaint cannot be empty.");

@@ -151,6 +151,24 @@ public class AdminMenu {
         System.out.println(border);
     }
 
+    private void displayVisitsTable(List<ClinicVisit> visits, String title) {
+        System.out.println("\n=== " + title + " ===");
+        if (visits.isEmpty()) {
+            System.out.println("-> No clinic visit records found.");
+            return;
+        }
+        System.out.println("+-----+---------------+--------------------+--------------------+--------------------+-----+---------------------+");
+        System.out.printf("| %-3s | %-13s | %-18s | %-18s | %-18s | %-3s | %-19s |\n",
+                "ID", "Student", "Complaint", "Treatment", "Medicine", "Qty", "Date");
+        System.out.println("+-----+---------------+--------------------+--------------------+--------------------+-----+---------------------+");
+        for (ClinicVisit v : visits) {
+            System.out.printf("| %-3d | %-13s | %-18s | %-18s | %-18s | %-3d | %-19s |\n",
+                    v.id(), v.studentName(), truncate(v.complaint(), 18), truncate(v.treatmentGiven(), 18),
+                    truncate(v.medicineName(), 18), v.quantityDispensed(), v.visitDate());
+        }
+        System.out.println("+-----+---------------+--------------------+--------------------+--------------------+-----+---------------------+");
+    }
+
     private void viewAllUser() {
         displayUserTable(userDao.getAllUsers(), "ALL REGISTERED USERS");
     }
@@ -281,37 +299,6 @@ public class AdminMenu {
         System.out.println("-> [SUCCESS] User ID " + userId + " deleted successfully.");
     }
 
-    private void displayVisitsTable(List<ClinicVisit> visits, String title) {
-        System.out.println("\n=========================================================================================================================");
-        System.out.println("                                            " + title);
-        System.out.println("=========================================================================================================================");
-        if (visits == null || visits.isEmpty()) {
-            System.out.println("-> No clinic visit records found.");
-            return;
-        }
-
-        String border = "+-----+---------------+--------------------+--------------------+--------------------+-----+---------------------+----------+";
-        System.out.println(border);
-        System.out.printf("| %-3s | %-13s | %-18s | %-18s | %-18s | %-3s | %-19s | %-8s |\n",
-                "ID", "Student", "Complaint", "Treatment", "Medicine", "Qty", "Date", "Status");
-        System.out.println(border);
-
-        for (ClinicVisit v : visits) {
-            System.out.printf("| %-3d | %-13s | %-18s | %-18s | %-18s | %-3d | %-19s | %-8s |\n",
-                    v.id(),
-                    truncate(v.studentName(), 13),
-                    truncate(v.complaint(), 18),
-                    truncate(v.treatmentGiven(), 18),
-                    truncate(v.medicineName(), 18),
-                    v.quantityDispensed(),
-                    truncate(v.visitDate(), 19),
-                    truncate(v.status(), 8));
-        }
-        System.out.println(border);
-    }
-
-
-
     private String truncate(String text, int max) {
         if (text == null) return "";
         return text.length() <= max ? text : text.substring(0, Math.max(0, max - 3)) + "...";
@@ -401,14 +388,7 @@ public class AdminMenu {
     }
 
     private void manageVisitRecords(User admin) {
-        List<ClinicVisit> visits = visitDao.getAllVisits(true);
-        if (visits.isEmpty()) {
-            System.out.println("-> No visits found.");
-            return;
-        }
-        visits.forEach(v -> System.out.printf("ID: %-3d | Student: %-12s | Complaint: %-15s | Treatment: %-15s | Date: %s\n",
-                v.id(), v.studentName(), v.complaint(), v.treatmentGiven(), v.visitDate()));
-
+        displayVisitsTable(visitDao.getAllVisits(false), "ALL CLINIC VISITS");
         int visitId = readIntInput("Enter Visit ID to Edit (or 0 to go back): ");
         if (visitId == 0) return;
 

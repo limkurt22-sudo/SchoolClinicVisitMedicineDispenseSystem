@@ -357,9 +357,8 @@ public class AdminMenu {
                     }
                 }
                 case 3 -> {
-                    medicineDao.getAllMedicines(false).forEach(m ->
-                            System.out.printf("ID: %-3d | %-18s | %-12s | Stock: %-4d | Exp: %-10s | %s\n",
-                                    m.id(), m.name(), m.dosageForm(), m.stockQuantity(), m.expirationDate(), m.status()));
+                    List<Medicine> viewAllMedicine = medicineDao.getAllMedicines(false);
+                    displayMedicineTable(viewAllMedicine);
 
                     int id = readIntInput("Enter Medicine ID to update: ");
                     Medicine ex = medicineDao.getMedicineById(id);
@@ -386,6 +385,8 @@ public class AdminMenu {
                     }
                 }
                 case 4 -> {
+                    List<Medicine> viewAllMedicine = medicineDao.getAllMedicines(false);
+                    displayMedicineTable(viewAllMedicine);
                     int id = readIntInput("Enter Medicine ID: ");
                     System.out.print("Status (ACTIVE / INACTIVE): ");
                     String st = scanner.nextLine().trim().toUpperCase();

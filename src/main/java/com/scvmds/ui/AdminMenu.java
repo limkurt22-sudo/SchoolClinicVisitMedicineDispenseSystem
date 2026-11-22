@@ -374,6 +374,7 @@ public class AdminMenu {
                 case 4 -> {
                     List<Medicine> viewAllMedicine = medicineDao.getAllMedicines(false);
                     displayMedicineTable(viewAllMedicine);
+
                     int id = readIntInput("Enter Medicine ID: ");
                     System.out.print("Status (ACTIVE / INACTIVE): ");
                     String st = scanner.nextLine().trim().toUpperCase();
@@ -388,7 +389,8 @@ public class AdminMenu {
     }
 
     private void manageVisitRecords(User admin) {
-        displayVisitsTable(visitDao.getAllVisits(false), "ALL CLINIC VISITS");
+        List<Medicine> viewAllMedicine = medicineDao.getAllMedicines(true);
+        displayMedicineTable(viewAllMedicine);
         int visitId = readIntInput("Enter Visit ID to Edit (or 0 to go back): ");
         if (visitId == 0) return;
 
@@ -448,6 +450,8 @@ public class AdminMenu {
     }
 
     private void generateReports(User admin) {
+        List<ClinicVisit> viewAllClinicVisit = visitDao.getAllVisits(true);
+        displayVisitsTable(viewAllClinicVisit, "ALL CLINIC VISITS");
         System.out.print("Enter Month & Year (YYYY-MM, e.g., 2026-10): ");
         String ym = scanner.nextLine().trim();
         visitDao.printMonthlySummaryReport(ym);

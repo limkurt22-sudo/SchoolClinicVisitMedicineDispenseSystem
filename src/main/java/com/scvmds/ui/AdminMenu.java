@@ -310,6 +310,8 @@ public class AdminMenu {
         System.out.println(border);
     }
 
+
+
     private String truncate(String text, int max) {
         if (text == null) return "";
         return text.length() <= max ? text : text.substring(0, Math.max(0, max - 3)) + "...";
@@ -333,9 +335,10 @@ public class AdminMenu {
             int opt = readIntInput("Select Option: ");
 
             switch (opt) {
-                case 1 -> medicineDao.getAllMedicines(false).forEach(m ->
-                        System.out.printf("ID: %-3d | %-18s | %-12s | Stock: %-4d | Exp: %-10s | %s\n",
-                                m.id(), m.name(), m.dosageForm(), m.stockQuantity(), m.expirationDate(), m.status()));
+                case 1 -> {
+                    List<Medicine> viewAllMedicine = medicineDao.getAllMedicines(false);
+                displayMedicineTable(viewAllMedicine);
+                }
 
                 case 2 -> {
                     System.out.print("Medicine Name: ");

@@ -4,6 +4,9 @@ import com.scvmds.model.Medicine;
 
 import java.sql.*;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.format.ResolverStyle;
 import java.util.ArrayList;
 import java.util.List;
 import java.time.format.DateTimeParseException;
@@ -121,6 +124,10 @@ public class MedicineDao {
     public int deactivateExpiredMedicines() {
         int deactivatedCount = 0;
         LocalDate today = LocalDate.now();
+        DateTimeFormatter flexibleDateFormatter = new DateTimeFormatterBuilder()
+                .appendPattern("uuuu-M-d")
+                .toFormatter()
+                .withResolverStyle(ResolverStyle.SMART);
 
         for (Medicine med : getAllMedicines(true)) {
             if ("INACTIVE".equalsIgnoreCase(med.status())) {
@@ -130,18 +137,45 @@ public class MedicineDao {
             if (expStr == null || expStr.isBlank()) {
                 continue;
             }
-            try {
-                LocalDate expiryDate = LocalDate.parse(expStr.trim()); // expects YYYY-MM-DD
-                if (!expiryDate.isAfter(today)) { // expired today or earlier
-                    if (setMedicineStatus(med.id(), "INACTIVE")) {
-                        deactivatedCount++;
-                    }
+
+            LocalDate expiryDate = parseExpirationDate(expStr.trim(), med.id(), flexibleDateFormatter);
+            if (expiryDate == null) {
+                continue;
+            }
+
+
+            if (!expiryDate.isAfter(today)) {
+                if (setMedicineStatus(med.id(), "INACTIVE")) {
+                    deactivatedCount++;
                 }
-            } catch (DateTimeParseException e) {
-                System.err.println("[WARN] Invalid expiration date format for Medicine ID " + med.id() + ": " + expStr);
             }
         }
         return deactivatedCount;
     }
 
+    private LocalDate parseExpirationDate(String rawDate, int medId, DateTimeFormatter formatter) {
+        try {
+            return LocalDate.parse(rawDate, formatter);
+        } catch (DateTimeParseException ex) {
+            // Handle non-leap year
+            String[] parts = rawDate.split("-");
+            if (parts.length == 3 && "02".equals(parts[1]) || "2".equals(parts[1])) {
+                try {
+                    int year = Integer.parseInt(parts[0]);
+                    int day = Integer.parseInt(parts[2]);
+                    if (day >= 29) {
+                        LocalDate clamped = LocalDate.of(year, 2, 1).withDayOfMonth(
+                                LocalDate.of(year, 2, 1).lengthOfMonth()
+                        );
+                        System.err.println("[WARN] Adjusted non-leap Feb date for Medicine ID " + medId
+                                + " from " + rawDate + " to " + clamped);
+                        return clamped;
+                    }
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            System.err.println("[WARN] Invalid expiration date format for Medicine ID " + medId + ": " + rawDate);
+            return null;
+        }
+    }
 }

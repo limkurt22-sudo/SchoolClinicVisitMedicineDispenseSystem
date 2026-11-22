@@ -157,21 +157,20 @@ public class MedicineDao {
         try {
             return LocalDate.parse(rawDate, formatter);
         } catch (DateTimeParseException ex) {
-            // Handle non-leap year
             String[] parts = rawDate.split("-");
-            if (parts.length == 3 && "02".equals(parts[1]) || "2".equals(parts[1])) {
+            if (parts.length == 3 && ("02".equals(parts[1]) || "2".equals(parts[1]))) {
                 try {
                     int year = Integer.parseInt(parts[0]);
                     int day = Integer.parseInt(parts[2]);
                     if (day >= 29) {
-                        LocalDate clamped = LocalDate.of(year, 2, 1).withDayOfMonth(
-                                LocalDate.of(year, 2, 1).lengthOfMonth()
-                        );
+                        LocalDate firstOfFeb = LocalDate.of(year, 2, 1);
+                        LocalDate clamped = firstOfFeb.withDayOfMonth(firstOfFeb.lengthOfMonth());
                         System.err.println("[WARN] Adjusted non-leap Feb date for Medicine ID " + medId
                                 + " from " + rawDate + " to " + clamped);
                         return clamped;
                     }
                 } catch (NumberFormatException ignored) {
+                    // Fall through to invalid format warning
                 }
             }
             System.err.println("[WARN] Invalid expiration date format for Medicine ID " + medId + ": " + rawDate);
